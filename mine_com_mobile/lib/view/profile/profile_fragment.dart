@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../provider/minecraft_server_provider.dart';
+import 'package:intl/intl.dart';
 import 'package:mine_com_mobile/l10n/app_localizations.dart';
+
+import '../../model/dashboard_model.dart';
+import '../../model/user_model.dart';
+import '../../provider/profile_provider.dart';
 
 class ProfileFragment extends ConsumerWidget {
   const ProfileFragment({super.key});
@@ -9,60 +13,51 @@ class ProfileFragment extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final servers = ref.watch(serverListProvider);
     final l10n = AppLocalizations.of(context)!;
-    
-    // -----------------------------------------------------------------------------------------------------------------------
-    // Данные из бд
-    // -----------------------------------------------------------------------------------------------------------------------
+    final profileAsync = ref.watch(profileProvider);
 
-    final totalServers = servers.length;
-    final onlineServers = 1;
-    final offlineServers = servers.length - onlineServers;
-    final totalPlayers = 12;
-    final avgPlayers = 6;
-    final avgCpu = 52.3;
-    final avgMemory = 68.7;
-    final mostPopularServerName = 'Minecraft Server 1';
-    final mostPopularServerPlayers = 12;
-
-    // -----------------------------------------------------------------------------------------------------------------------
-    // Данные из бд
-    // -----------------------------------------------------------------------------------------------------------------------
-    
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.profileMainMenu),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            _buildProfileHeader(theme, l10n),
-            const SizedBox(height: 24),
-            
-            _buildStatsCards(theme, totalServers, onlineServers, totalPlayers, l10n),
-            const SizedBox(height: 24),
-            
-            _buildServerOverview(
-              theme,
-              avgPlayers,
-              avgCpu,
-              avgMemory,
-              mostPopularServerName,
-              mostPopularServerPlayers,
-              l10n
-            ),
-            const SizedBox(height: 16),
-            
-            _buildActivitySection(theme, context, onlineServers, offlineServers, l10n),
-          ],
+      body: profileAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stackTrace) => _buildErrorState(
+          context,
+          ref,
+          theme,
+          error.toString(),
+          l10n,
+        ),
+        data: (profile) => RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(profileProvider);
+            await ref.read(profileProvider.future);
+          },
+          child: ListView(
+            padding: const EdgeInsets.all(16),
+            children: [
+              _buildProfileHeader(theme, profile.user, l10n),
+              const SizedBox(height: 24),
+              _buildStatsCards(theme, profile.dashboard, l10n),
+              const SizedBox(height: 24),
+              _buildOverviewSection(theme, profile.dashboard, l10n),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildProfileHeader(ThemeData theme, AppLocalizations l10n) {
+  Widget _buildProfileHeader(
+    ThemeData theme,
+    UserModel user,
+    AppLocalizations l10n,
+  ) {
+    final joinDate = user.createdAt == null
+        ? null
+        : DateFormat.yMMMd().format(user.createdAt!);
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -114,18 +109,25 @@ class ProfileFragment extends ConsumerWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            l10n.administratorProfile,
+            user.displayName,
             style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 4),
           Text(
-            'admin@minecraft-manager.com',
+            user.email,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.textTheme.bodySmall?.color,
             ),
           ),
+          if (joinDate != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              '${l10n.profileJoinedLabel}: $joinDate',
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
           const SizedBox(height: 8),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -146,7 +148,7 @@ class ProfileFragment extends ConsumerWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  l10n.systemadministratorProfile,
+                  user.role.toUpperCase(),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: const Color(0xFF00E676),
                     fontWeight: FontWeight.w600,
@@ -160,14 +162,18 @@ class ProfileFragment extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatsCards(ThemeData theme, int total, int online, int players, AppLocalizations l10n) {
+  Widget _buildStatsCards(
+    ThemeData theme,
+    DashboardModel dashboard,
+    AppLocalizations l10n,
+  ) {
     return Row(
       children: [
         Expanded(
           child: _buildStatCard(
             theme,
             Icons.dns_rounded,
-            total.toString(),
+            dashboard.totalMcServers.toString(),
             l10n.totalServersProfile,
             const Color(0xFF2196F3),
           ),
@@ -177,7 +183,7 @@ class ProfileFragment extends ConsumerWidget {
           child: _buildStatCard(
             theme,
             Icons.power_settings_new,
-            online.toString(),
+            dashboard.onlineMcServers.toString(),
             l10n.onlineProfile,
             const Color(0xFF00E676),
           ),
@@ -187,7 +193,7 @@ class ProfileFragment extends ConsumerWidget {
           child: _buildStatCard(
             theme,
             Icons.people,
-            players.toString(),
+            dashboard.playersOnline.toString(),
             l10n.playersProfile,
             const Color(0xFFFF9800),
           ),
@@ -239,14 +245,10 @@ class ProfileFragment extends ConsumerWidget {
     );
   }
 
-  Widget _buildServerOverview(
+  Widget _buildOverviewSection(
     ThemeData theme,
-    int avgPlayers,
-    double avgCpu,
-    double avgMemory,
-    String mostPopularName,
-    int mostPopularPlayers,
-    AppLocalizations l10n
+    DashboardModel dashboard,
+    AppLocalizations l10n,
   ) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -282,43 +284,62 @@ class ProfileFragment extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 20),
-          
           _buildOverviewItem(
             theme,
-            Icons.people_outline,
-            l10n.averageNumberOfPlayersProfile,
-            '$avgPlayers игр.',
-            const Color(0xFFFF9800),
+            Icons.hub_outlined,
+            l10n.profileNodesLabel,
+            '${dashboard.onlineNodes}/${dashboard.totalNodes}',
+            const Color(0xFF03A9F4),
           ),
           const SizedBox(height: 16),
-          
           _buildOverviewItem(
             theme,
             Icons.memory,
             l10n.averageCpuLoadProfile,
-            '${avgCpu.toStringAsFixed(1)}%',
-            avgCpu > 70 ? const Color(0xFFFF5252) : const Color(0xFF4CAF50),
+            '${dashboard.avgCpuPercent.toStringAsFixed(1)}%',
+            dashboard.avgCpuPercent > 70
+                ? const Color(0xFFFF5252)
+                : const Color(0xFF4CAF50),
           ),
           const SizedBox(height: 16),
-          
           _buildOverviewItem(
             theme,
             Icons.storage,
             l10n.averageRamLoadProfile,
-            '${avgMemory.toStringAsFixed(1)}%',
-            avgMemory > 70 ? const Color(0xFFFF5252) : const Color(0xFF4CAF50),
+            '${dashboard.avgRamPercent.toStringAsFixed(1)}%',
+            dashboard.avgRamPercent > 70
+                ? const Color(0xFFFF5252)
+                : const Color(0xFF4CAF50),
           ),
-          
+          const SizedBox(height: 16),
+          _buildOverviewItem(
+            theme,
+            Icons.pie_chart_outline,
+            l10n.profileDiskLabel,
+            '${dashboard.avgDiskPercent.toStringAsFixed(1)}%',
+            dashboard.avgDiskPercent > 80
+                ? const Color(0xFFFF5252)
+                : const Color(0xFFFF9800),
+          ),
           const SizedBox(height: 16),
           Divider(color: theme.dividerColor),
           const SizedBox(height: 16),
-          
           _buildOverviewItem(
             theme,
-            Icons.star,
-            l10n.mostPopularServerProfile,
-            '$mostPopularName ($mostPopularPlayers игр.)',
+            Icons.backup_outlined,
+            l10n.profileBackupsLabel,
+            dashboard.totalBackups.toString(),
             const Color(0xFFFFC107),
+          ),
+          const SizedBox(height: 16),
+          _buildOverviewItem(
+            theme,
+            Icons.warning_amber_rounded,
+            l10n.profileCrashesLabel,
+            dashboard.crashesLast24h.toString(),
+            dashboard.crashesLast24h > 0
+                ? const Color(0xFFFF5252)
+                : const Color(0xFF4CAF50),
           ),
         ],
       ),
@@ -366,92 +387,44 @@ class ProfileFragment extends ConsumerWidget {
     );
   }
 
-  Widget _buildActivitySection(
-    ThemeData theme,
+  Widget _buildErrorState(
     BuildContext context,
-    int online,
-    int offline,
-    AppLocalizations l10n
-  ) {
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: theme.dividerColor),
-      ),
-      child: Column(
-        children: [
-          _buildListTile(
-            theme,
-            Icons.terminal,
-            l10n.sshConnectionsProfile,
-            l10n.keyAndSessionManagementProfile,
-            () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Управление SSH')),
-              );
-            },
-          ),
-          Divider(height: 1, color: theme.dividerColor),
-          _buildListTile(
-            theme,
-            Icons.history,
-            l10n.activityHistoryProfile,
-            l10n.operationAndChangeLogProfile,
-            () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l10n.activityHistoryProfile)),
-              );
-            },
-          ),
-          Divider(height: 1, color: theme.dividerColor),
-          _buildListTile(
-            theme,
-            Icons.assessment_outlined,
-            l10n.serverStatusProfile,
-            '${l10n.onlineProfile}: $online • ${l10n.offlineServerList}: $offline',
-            () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l10n.detailedstatisticsProfile)),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildListTile(
+    WidgetRef ref,
     ThemeData theme,
-    IconData icon,
-    String title,
-    String subtitle,
-    VoidCallback onTap,
+    String message,
+    AppLocalizations l10n,
   ) {
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      leading: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: const Color(0xFF00E676).withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.cloud_off_outlined,
+              size: 56,
+              color: theme.colorScheme.error,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              l10n.profileLoadError,
+              style: theme.textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: theme.textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => ref.invalidate(profileProvider),
+              child: Text(l10n.retryCommon),
+            ),
+          ],
         ),
-        child: Icon(
-          icon,
-          color: const Color(0xFF00E676),
-          size: 24,
-        ),
       ),
-      title: Text(
-        title,
-        style: theme.textTheme.titleSmall,
-      ),
-      subtitle: Text(
-        subtitle,
-        style: theme.textTheme.bodySmall,
-      ),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-      onTap: onTap,
     );
   }
 }

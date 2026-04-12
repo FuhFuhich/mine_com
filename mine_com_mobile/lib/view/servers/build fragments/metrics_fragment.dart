@@ -1,85 +1,103 @@
-import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:mine_com_mobile/l10n/app_localizations.dart';
-import '../../../model/minecraft_server_model.dart';
 
-class MetricsFragment extends StatefulWidget {
+import '../../../model/minecraft_server_model.dart';
+import '../../../model/metrics_model.dart';
+import '../../../provider/metrics_provider.dart';
+
+class MetricsFragment extends ConsumerStatefulWidget {
+  const MetricsFragment({
+    super.key,
+    required this.server,
+  });
+
   final MinecraftServerModel server;
 
-  const MetricsFragment({super.key, required this.server});
-
   @override
-  State<MetricsFragment> createState() => _MetricsFragmentState();
+  ConsumerState<MetricsFragment> createState() => _MetricsFragmentState();
 }
 
-class _MetricsFragmentState extends State<MetricsFragment> {
+class _MetricsFragmentState extends ConsumerState<MetricsFragment> {
   int _selectedTab = 0;
+
+  Future<void> _refresh() async {
+    ref.invalidate(serverMetricsScreenProvider(widget.server.id));
+    await ref.read(serverMetricsScreenProvider(widget.server.id).future);
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    
-    // -----------------------------------------------------------------------------------------------------------------------
-    // Данные из бд
-    // -----------------------------------------------------------------------------------------------------------------------
-
-    final serverName = widget.server.name;
-    
-    // Исторические данные метрик
-    final List<double> cpuData = [10, 20, 35, 45, 50, 48, 52, 60, 55, 50];
-    final List<double> ramData = [30, 40, 50, 60, 65, 62, 68, 72, 70, 68];
-    
-    // Текущие значения
-    final currentCpu = 50.0;
-    final currentRam = 68.0;
-    
-    // Статистика (средние и максимальные значения)
-    final avgCpu = 42.5;
-    final avgRam = 58.5;
-    final maxCpu = 60.0;
-    final maxRam = 72.0;
-
-    // -----------------------------------------------------------------------------------------------------------------------
-    // Данные из бд
-    // -----------------------------------------------------------------------------------------------------------------------
+    final metricsAsync = ref.watch(serverMetricsScreenProvider(widget.server.id));
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('$serverName - ${l10n.metricsMetricsFragment}'),
+        title: Text('${widget.server.name} - ${l10n.metricsMetricsFragment}'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      body: metricsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stackTrace) => _MetricsErrorState(
+          message: error.toString(),
+          onRetry: _refresh,
+        ),
+        data: (data) {
+          if (data.current == null && data.series.isEmpty) {
+            return _MetricsEmptyState(
+              message: l10n.metricsUnavailableMessage,
+            );
+          }
+
+          final current = data.current ?? data.series.last;
+
+          return RefreshIndicator(
+            onRefresh: _refresh,
+            child: ListView(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                16,
+                16,
+                24 + MediaQuery.of(context).padding.bottom,
+              ),
               children: [
-                _buildTab(context, l10n.cpuMetricsFragment, 0),
-                _buildTab(context, l10n.memoryMetricsFragment, 1),
-                _buildTab(context, l10n.overviewMetricsFragment, 2),
+                Row(
+                  children: [
+                    _buildTab(context, l10n.cpuMetricsFragment, 0),
+                    _buildTab(context, l10n.memoryMetricsFragment, 1),
+                    _buildTab(context, l10n.overviewMetricsFragment, 2),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                if (_selectedTab == 0)
+                  _buildChart(
+                    context,
+                    data.series,
+                    l10n.cpuMetricsFragment,
+                    (item) => item.cpuUsagePercent,
+                  ),
+                if (_selectedTab == 1)
+                  _buildChart(
+                    context,
+                    data.series,
+                    l10n.ramMetricsFragment,
+                    (item) => item.ramUsagePercent,
+                  ),
+                if (_selectedTab == 2) _buildOverview(context, current, l10n),
+                const SizedBox(height: 20),
+                _buildStatsCard(context, data.series, l10n),
               ],
             ),
-            const SizedBox(height: 20),
-            if (_selectedTab == 0) _buildCpuChart(context, cpuData, l10n),
-            if (_selectedTab == 1) _buildRamChart(context, ramData, l10n),
-            if (_selectedTab == 2) _buildOverview(context, currentCpu, currentRam, l10n),
-            const SizedBox(height: 20),
-            _buildStatsCard(context, avgCpu, avgRam, maxCpu, maxRam, l10n),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
   Widget _buildTab(BuildContext context, String label, int index) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final tt = theme.textTheme;
-
     final isSelected = _selectedTab == index;
-
-    final selectedTextColor = cs.primary;
-    final unselectedTextColor = cs.onSurface.withOpacity(0.70);
 
     return Expanded(
       child: GestureDetector(
@@ -87,16 +105,19 @@ class _MetricsFragmentState extends State<MetricsFragment> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? cs.primary.withOpacity(0.16) : Colors.transparent,
+            color: isSelected
+                ? theme.colorScheme.primary.withOpacity(0.16)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(10),
           ),
           child: Center(
             child: Text(
               label,
-              style: (tt.bodyMedium ?? const TextStyle()).copyWith(
-                color: isSelected ? selectedTextColor : unselectedTextColor,
-                fontSize: 14,
+              style: theme.textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.bold,
+                color: isSelected
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurface.withOpacity(0.7),
               ),
             ),
           ),
@@ -105,338 +126,284 @@ class _MetricsFragmentState extends State<MetricsFragment> {
     );
   }
 
-  Widget _buildCpuChart(BuildContext context, List<double> cpuData, AppLocalizations l10n) {
+  Widget _buildChart(
+    BuildContext context,
+    List<ServerMetricsModel> series,
+    String title,
+    double Function(ServerMetricsModel item) selector,
+  ) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final tt = theme.textTheme;
-
-    final gridColor = cs.onSurface.withOpacity(0.18);
-    final borderColor = cs.outline.withOpacity(0.50);
-    final labelColor = cs.onSurface.withOpacity(0.70);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l10n.cpuLoadLast10MeasurementsMetricsFragment,
-          style: tt.titleSmall,
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          height: 300,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: true,
-                  horizontalInterval: 20,
-                  verticalInterval: 1,
-                  getDrawingHorizontalLine: (_) => FlLine(
-                    color: gridColor,
-                    strokeWidth: 0.5,
-                  ),
-                  getDrawingVerticalLine: (_) => FlLine(
-                    color: gridColor,
-                    strokeWidth: 0.5,
-                  ),
-                ),
-                titlesData: FlTitlesData(
-                  show: true,
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 30,
-                      getTitlesWidget: (value, meta) => Text(
-                        '${value.toInt()}',
-                        style: (tt.bodySmall ?? const TextStyle()).copyWith(
-                          color: labelColor,
-                          fontSize: 10,
-                        ),
-                      ),
-                    ),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 40,
-                      getTitlesWidget: (value, meta) => Text(
-                        '${value.toInt()}%',
-                        style: (tt.bodySmall ?? const TextStyle()).copyWith(
-                          color: labelColor,
-                          fontSize: 10,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                borderData: FlBorderData(
-                  show: true,
-                  border: Border.all(
-                    color: borderColor,
-                    width: 1,
-                  ),
-                ),
-                minX: 0,
-                maxX: 9,
-                minY: 0,
-                maxY: 100,
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: cpuData
-                        .asMap()
-                        .entries
-                        .map((e) => FlSpot(e.key.toDouble(), e.value))
-                        .toList(),
-                    isCurved: true,
-                    color: cs.primary,
-                    barWidth: 3,
-                    isStrokeCapRound: true,
-                    dotData: FlDotData(
-                      show: true,
-                      getDotPainter: (spot, percent, bar, index) {
-                        return FlDotCirclePainter(
-                          radius: 2.6,
-                          color: cs.primary,
-                          strokeWidth: 1,
-                          strokeColor: cs.surface,
-                        );
-                      },
-                    ),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: cs.primary.withOpacity(0.12),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRamChart(BuildContext context, List<double> ramData, AppLocalizations l10n) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final tt = theme.textTheme;
-
-    final gridColor = cs.onSurface.withOpacity(0.18);
-    final borderColor = cs.outline.withOpacity(0.50);
-    final labelColor = cs.onSurface.withOpacity(0.70);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l10n.ramUsageLast10MeasurementsMetricsFragment,
-          style: tt.titleSmall,
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          height: 300,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: LineChart(
-              LineChartData(
-                gridData: FlGridData(
-                  show: true,
-                  drawVerticalLine: true,
-                  horizontalInterval: 20,
-                  verticalInterval: 1,
-                  getDrawingHorizontalLine: (_) => FlLine(
-                    color: gridColor,
-                    strokeWidth: 0.5,
-                  ),
-                  getDrawingVerticalLine: (_) => FlLine(
-                    color: gridColor,
-                    strokeWidth: 0.5,
-                  ),
-                ),
-                titlesData: FlTitlesData(
-                  show: true,
-                  rightTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: const AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 30,
-                      getTitlesWidget: (value, meta) => Text(
-                        '${value.toInt()}',
-                        style: (tt.bodySmall ?? const TextStyle()).copyWith(
-                          color: labelColor,
-                          fontSize: 10,
-                        ),
-                      ),
-                    ),
-                  ),
-                  leftTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 40,
-                      getTitlesWidget: (value, meta) => Text(
-                        '${value.toInt()}%',
-                        style: (tt.bodySmall ?? const TextStyle()).copyWith(
-                          color: labelColor,
-                          fontSize: 10,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                borderData: FlBorderData(
-                  show: true,
-                  border: Border.all(
-                    color: borderColor,
-                    width: 1,
-                  ),
-                ),
-                minX: 0,
-                maxX: 9,
-                minY: 0,
-                maxY: 100,
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: ramData
-                        .asMap()
-                        .entries
-                        .map((e) => FlSpot(e.key.toDouble(), e.value))
-                        .toList(),
-                    isCurved: true,
-                    color: cs.primary,
-                    barWidth: 3,
-                    isStrokeCapRound: true,
-                    dotData: FlDotData(
-                      show: true,
-                      getDotPainter: (spot, percent, bar, index) {
-                        return FlDotCirclePainter(
-                          radius: 2.6,
-                          color: cs.primary,
-                          strokeWidth: 1,
-                          strokeColor: cs.surface,
-                        );
-                      },
-                    ),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: cs.primary.withOpacity(0.12),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildOverview(BuildContext context, double currentCpu, double currentRam, AppLocalizations l10n) {
-    final tt = Theme.of(context).textTheme;
-    final cs = Theme.of(context).colorScheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l10n.metricsOverviewMetricsFragment,
-          style: tt.titleSmall,
-        ),
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _buildCircularMetric(
-                context: context,
-                label: l10n.cpuMetricsFragment,
-                value: currentCpu,
-                color: cs.primary,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildCircularMetric(
-                context: context,
-                label: l10n.ramMetricsFragment,
-                value: currentRam,
-                color: cs.primary,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCircularMetric({
-    required BuildContext context,
-    required String label,
-    required double value,
-    required Color color,
-  }) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final tt = theme.textTheme;
-
-    final cardColor = theme.cardColor;
-    final borderColor = cs.outline.withOpacity(0.50);
-    final trackColor = cs.onSurface.withOpacity(0.18);
-    final secondaryText = cs.onSurface.withOpacity(0.70);
+    final points = series.isEmpty
+        ? const <ServerMetricsModel>[]
+        : series;
+    final spots = points.isEmpty
+        ? const <FlSpot>[FlSpot(0, 0)]
+        : points
+            .asMap()
+            .entries
+            .map((entry) => FlSpot(entry.key.toDouble(), selector(entry.value)))
+            .toList(growable: false);
+    final values = points.map(selector).toList(growable: false);
+    final maxValue = values.isEmpty
+        ? 100.0
+        : values.reduce((current, next) => current > next ? current : next);
+    final dynamicMaxY = maxValue <= 100 ? 100.0 : (maxValue * 1.15).clamp(100.0, 10000.0);
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: cardColor,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor),
+        border: Border.all(color: theme.dividerColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 280,
+            child: LineChart(
+              LineChartData(
+                minY: 0,
+                maxY: dynamicMaxY,
+                lineTouchData: LineTouchData(
+                  handleBuiltInTouches: true,
+                  touchTooltipData: LineTouchTooltipData(
+                    getTooltipColor: (_) => theme.cardColor,
+                    fitInsideHorizontally: true,
+                    fitInsideVertically: true,
+                    getTooltipItems: (touchedSpots) {
+                      return touchedSpots.map((spot) {
+                        final index = spot.x.toInt().clamp(0, points.length - 1);
+                        final point = points[index];
+                        return LineTooltipItem(
+                          '${_formatTooltipDate(point.recordedAt)}\n'
+                          '${selector(point).toStringAsFixed(2)}%',
+                          theme.textTheme.bodySmall?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ) ??
+                              const TextStyle(fontSize: 12),
+                        );
+                      }).toList(growable: false);
+                    },
+                  ),
+                ),
+                gridData: FlGridData(
+                  show: true,
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: theme.dividerColor,
+                    strokeWidth: 0.5,
+                  ),
+                ),
+                borderData: FlBorderData(
+                  show: true,
+                  border: Border.all(color: theme.dividerColor),
+                ),
+                titlesData: FlTitlesData(
+                  topTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  rightTitles: const AxisTitles(
+                    sideTitles: SideTitles(showTitles: false),
+                  ),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      interval: spots.length > 8 ? 2 : 1,
+                      getTitlesWidget: (value, meta) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            value.toInt().toString(),
+                            style: theme.textTheme.bodySmall,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 46,
+                      getTitlesWidget: (value, meta) {
+                        return Text(
+                          '${value.toInt()}%',
+                          style: theme.textTheme.bodySmall,
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: spots,
+                    isCurved: true,
+                    color: theme.colorScheme.primary,
+                    barWidth: 3,
+                    isStrokeCapRound: true,
+                    dotData: FlDotData(show: spots.length <= 12),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: theme.colorScheme.primary.withOpacity(0.12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOverview(
+    BuildContext context,
+    ServerMetricsModel current,
+    AppLocalizations l10n,
+  ) {
+    final theme = Theme.of(context);
+
+    return Row(
+      children: [
+        Expanded(
+          child: _CircularMetric(
+            label: l10n.cpuMetricsFragment,
+            value: current.cpuUsagePercent,
+            color: theme.colorScheme.primary,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _CircularMetric(
+            label: l10n.ramMetricsFragment,
+            value: current.ramUsagePercent,
+            color: Colors.purple,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatsCard(
+    BuildContext context,
+    List<ServerMetricsModel> series,
+    AppLocalizations l10n,
+  ) {
+    final theme = Theme.of(context);
+    final cpuValues = series.map((item) => item.cpuUsagePercent).toList();
+    final ramValues = series.map((item) => item.ramUsagePercent).toList();
+
+    final avgCpu = _average(cpuValues);
+    final avgRam = _average(ramValues);
+    final maxCpu = _maxValue(cpuValues);
+    final maxRam = _maxValue(ramValues);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.dividerColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.statisticsMetricsFragment,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _StatRow(label: l10n.averageCpuMetricsFragment, value: '${avgCpu.toStringAsFixed(1)}%'),
+          _StatRow(label: l10n.averageRamMetricsFragment, value: '${avgRam.toStringAsFixed(1)}%'),
+          _StatRow(label: l10n.maxCpuMetricsFragment, value: '${maxCpu.toStringAsFixed(1)}%'),
+          _StatRow(label: l10n.maxRamMetricsFragment, value: '${maxRam.toStringAsFixed(1)}%'),
+        ],
+      ),
+    );
+  }
+
+  double _average(List<double> values) {
+    if (values.isEmpty) {
+      return 0;
+    }
+    final sum = values.fold<double>(0, (total, value) => total + value);
+    return sum / values.length;
+  }
+
+  double _maxValue(List<double> values) {
+    if (values.isEmpty) {
+      return 0;
+    }
+    return values.reduce((current, next) => current > next ? current : next);
+  }
+
+  String _formatTooltipDate(DateTime? dateTime) {
+    if (dateTime == null) {
+      return '-';
+    }
+    return DateFormat('yyyy.MM.dd HH:mm:ss').format(dateTime.toLocal());
+  }
+}
+
+class _CircularMetric extends StatelessWidget {
+  const _CircularMetric({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final double value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.dividerColor),
       ),
       child: Column(
         children: [
           SizedBox(
-            height: 120,
             width: 120,
+            height: 120,
             child: Stack(
-              fit: StackFit.expand,
+              alignment: Alignment.center,
               children: [
-                CircularProgressIndicator(
-                  value: value / 100,
-                  strokeWidth: 6,
-                  backgroundColor: trackColor,
-                  valueColor: AlwaysStoppedAnimation<Color>(color),
-                ),
-                Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        '${value.toStringAsFixed(1)}%',
-                        style: (tt.titleLarge ?? const TextStyle()).copyWith(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: cs.onSurface,
-                        ),
-                      ),
-                      Text(
-                        label,
-                        style: (tt.bodySmall ?? const TextStyle()).copyWith(
-                          fontSize: 12,
-                          color: secondaryText,
-                        ),
-                      ),
-                    ],
+                SizedBox(
+                  width: 120,
+                  height: 120,
+                  child: CircularProgressIndicator(
+                    value: (value.clamp(0, 100)) / 100,
+                    strokeWidth: 8,
+                    backgroundColor: theme.dividerColor,
+                    valueColor: AlwaysStoppedAnimation<Color>(color),
                   ),
+                ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${value.toStringAsFixed(1)}%',
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(label, style: theme.textTheme.bodySmall),
+                  ],
                 ),
               ],
             ),
@@ -445,88 +412,94 @@ class _MetricsFragmentState extends State<MetricsFragment> {
       ),
     );
   }
+}
 
-  Widget _buildStatsCard(
-    BuildContext context,
-    double avgCpu,
-    double avgRam,
-    double maxCpu,
-    double maxRam,
-    AppLocalizations l10n,
-  ) {
+class _StatRow extends StatelessWidget {
+  const _StatRow({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final tt = theme.textTheme;
 
-    final cardColor = theme.cardColor;
-    final borderColor = cs.outline.withOpacity(0.50);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cardColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
         children: [
-          Text(l10n.statisticsMetricsFragment, style: tt.titleSmall),
-          const SizedBox(height: 12),
-          _buildStatRow(
-            context,
-            l10n.averageCpuMetricsFragment,
-            '${avgCpu.toStringAsFixed(1)}%',
+          Expanded(
+            child: Text(
+              label,
+              style: theme.textTheme.bodyMedium,
+            ),
           ),
-          const SizedBox(height: 8),
-          _buildStatRow(
-            context,
-            l10n.averageRamMetricsFragment,
-            '${avgRam.toStringAsFixed(1)}%',
-          ),
-          const SizedBox(height: 8),
-          _buildStatRow(
-            context,
-            l10n.maxCpuMetricsFragment,
-            '${maxCpu.toStringAsFixed(1)}%',
-          ),
-          const SizedBox(height: 8),
-          _buildStatRow(
-            context,
-            l10n.maxRamMetricsFragment,
-            '${maxRam.toStringAsFixed(1)}%',
+          Text(
+            value,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildStatRow(BuildContext context, String label, String value) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final tt = theme.textTheme;
+class _MetricsErrorState extends StatelessWidget {
+  const _MetricsErrorState({
+    required this.message,
+    required this.onRetry,
+  });
 
-    final labelColor = cs.onSurface.withOpacity(0.70);
+  final String message;
+  final Future<void> Function() onRetry;
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: (tt.bodySmall ?? const TextStyle()).copyWith(
-            color: labelColor,
-            fontSize: 12,
-          ),
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.show_chart_outlined, size: 56),
+            const SizedBox(height: 16),
+            Text(l10n.metricsUnavailableMessage, textAlign: TextAlign.center),
+            const SizedBox(height: 8),
+            Text(message, textAlign: TextAlign.center),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: onRetry,
+              child: Text(l10n.retryCommon),
+            ),
+          ],
         ),
-        Text(
-          value,
-          style: (tt.bodyMedium ?? const TextStyle()).copyWith(
-            color: cs.onSurface,
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-          ),
+      ),
+    );
+  }
+}
+
+class _MetricsEmptyState extends StatelessWidget {
+  const _MetricsEmptyState({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Text(
+          message,
+          textAlign: TextAlign.center,
         ),
-      ],
+      ),
     );
   }
 }

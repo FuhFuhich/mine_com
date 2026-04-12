@@ -967,6 +967,600 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Max RAM'**
   String get maxRamMetricsFragment;
+
+  /// No description provided for @authLoginTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get authLoginTitle;
+
+  /// No description provided for @authIdentityLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Email, username or phone'**
+  String get authIdentityLabel;
+
+  /// No description provided for @authIdentityHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your identity'**
+  String get authIdentityHint;
+
+  /// No description provided for @authIdentityRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your email, username or phone'**
+  String get authIdentityRequired;
+
+  /// No description provided for @authPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get authPasswordLabel;
+
+  /// No description provided for @authPasswordRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your password'**
+  String get authPasswordRequired;
+
+  /// No description provided for @authRememberMe.
+  ///
+  /// In en, this message translates to:
+  /// **'Remember me'**
+  String get authRememberMe;
+
+  /// No description provided for @authLoginButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get authLoginButton;
+
+  /// No description provided for @authRegisterLink.
+  ///
+  /// In en, this message translates to:
+  /// **'No account? Create one'**
+  String get authRegisterLink;
+
+  /// No description provided for @authGenericError.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Please try again.'**
+  String get authGenericError;
+
+  /// No description provided for @authRegisterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create account'**
+  String get authRegisterTitle;
+
+  /// No description provided for @authUsernameLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Username'**
+  String get authUsernameLabel;
+
+  /// No description provided for @authUsernameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a username'**
+  String get authUsernameRequired;
+
+  /// No description provided for @authEmailOptionalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Email (optional)'**
+  String get authEmailOptionalLabel;
+
+  /// No description provided for @authEmailInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid email'**
+  String get authEmailInvalid;
+
+  /// No description provided for @authPasswordTooShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must be at least 6 characters'**
+  String get authPasswordTooShort;
+
+  /// No description provided for @authConfirmPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm password'**
+  String get authConfirmPasswordLabel;
+
+  /// No description provided for @authPasswordsDoNotMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match'**
+  String get authPasswordsDoNotMatch;
+
+  /// No description provided for @authAcceptTerms.
+  ///
+  /// In en, this message translates to:
+  /// **'I accept the terms of use'**
+  String get authAcceptTerms;
+
+  /// No description provided for @authCreateAccountButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Create account'**
+  String get authCreateAccountButton;
+
+  /// No description provided for @authBackToLogin.
+  ///
+  /// In en, this message translates to:
+  /// **'Already have an account? Sign in'**
+  String get authBackToLogin;
+
+  /// No description provided for @authAcceptTermsError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please accept the terms of use'**
+  String get authAcceptTermsError;
+
+  /// No description provided for @profileJoinedLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Joined'**
+  String get profileJoinedLabel;
+
+  /// No description provided for @profileNodesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Nodes online/total'**
+  String get profileNodesLabel;
+
+  /// No description provided for @profileDiskLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Average disk load'**
+  String get profileDiskLabel;
+
+  /// No description provided for @profileBackupsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Backups'**
+  String get profileBackupsLabel;
+
+  /// No description provided for @profileCrashesLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Crashes in 24h'**
+  String get profileCrashesLabel;
+
+  /// No description provided for @profileLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load profile data'**
+  String get profileLoadError;
+
+  /// No description provided for @retryCommon.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry'**
+  String get retryCommon;
+
+  /// No description provided for @serverListLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load nodes and servers'**
+  String get serverListLoadError;
+
+  /// No description provided for @serverListNodesSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Nodes'**
+  String get serverListNodesSectionTitle;
+
+  /// No description provided for @serverListNodeRoleLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Role'**
+  String get serverListNodeRoleLabel;
+
+  /// No description provided for @serverListNodeAddressLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Address'**
+  String get serverListNodeAddressLabel;
+
+  /// No description provided for @serverListNodeServersLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Servers'**
+  String get serverListNodeServersLabel;
+
+  /// No description provided for @serverListNoNodes.
+  ///
+  /// In en, this message translates to:
+  /// **'No nodes are available for your account yet.'**
+  String get serverListNoNodes;
+
+  /// No description provided for @serverListEmptyDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This account does not have any Minecraft servers yet.'**
+  String get serverListEmptyDescription;
+
+  /// No description provided for @serverListReadOnlyRole.
+  ///
+  /// In en, this message translates to:
+  /// **'Read-only access'**
+  String get serverListReadOnlyRole;
+
+  /// No description provided for @serverActionStartedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Start command sent'**
+  String get serverActionStartedMessage;
+
+  /// No description provided for @serverActionStoppedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop command sent'**
+  String get serverActionStoppedMessage;
+
+  /// No description provided for @serverActionRestartedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Restart command sent'**
+  String get serverActionRestartedMessage;
+
+  /// No description provided for @serverStatusStarting.
+  ///
+  /// In en, this message translates to:
+  /// **'Starting'**
+  String get serverStatusStarting;
+
+  /// No description provided for @serverStatusStopping.
+  ///
+  /// In en, this message translates to:
+  /// **'Stopping'**
+  String get serverStatusStopping;
+
+  /// No description provided for @serverStatusRestarting.
+  ///
+  /// In en, this message translates to:
+  /// **'Restarting'**
+  String get serverStatusRestarting;
+
+  /// No description provided for @serverStatusDeploying.
+  ///
+  /// In en, this message translates to:
+  /// **'Deploying'**
+  String get serverStatusDeploying;
+
+  /// No description provided for @serverStatusUndeployed.
+  ///
+  /// In en, this message translates to:
+  /// **'Undeployed'**
+  String get serverStatusUndeployed;
+
+  /// No description provided for @serverStatusCrashed.
+  ///
+  /// In en, this message translates to:
+  /// **'Crashed'**
+  String get serverStatusCrashed;
+
+  /// No description provided for @serverStatusError.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get serverStatusError;
+
+  /// No description provided for @nodeDetailTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Node'**
+  String get nodeDetailTitle;
+
+  /// No description provided for @nodeDetailLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load node details'**
+  String get nodeDetailLoadError;
+
+  /// No description provided for @nodeDetailOsLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Operating system'**
+  String get nodeDetailOsLabel;
+
+  /// No description provided for @nodeDetailSshUserLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'SSH user'**
+  String get nodeDetailSshUserLabel;
+
+  /// No description provided for @nodeDetailSshPortLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'SSH port'**
+  String get nodeDetailSshPortLabel;
+
+  /// No description provided for @nodeDetailAuthLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Auth type'**
+  String get nodeDetailAuthLabel;
+
+  /// No description provided for @nodeDetailDescriptionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get nodeDetailDescriptionLabel;
+
+  /// No description provided for @nodeDetailUsageTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Live usage'**
+  String get nodeDetailUsageTitle;
+
+  /// No description provided for @nodeDetailDiskLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Disk'**
+  String get nodeDetailDiskLabel;
+
+  /// No description provided for @nodeDetailContainersLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Containers'**
+  String get nodeDetailContainersLabel;
+
+  /// No description provided for @nodeDetailNetworkRxLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Network RX'**
+  String get nodeDetailNetworkRxLabel;
+
+  /// No description provided for @nodeDetailNetworkTxLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Network TX'**
+  String get nodeDetailNetworkTxLabel;
+
+  /// No description provided for @nodeDetailCollectedAtLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Collected at'**
+  String get nodeDetailCollectedAtLabel;
+
+  /// No description provided for @nodeDetailHardwareTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Hardware'**
+  String get nodeDetailHardwareTitle;
+
+  /// No description provided for @nodeDetailCpuLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'CPU'**
+  String get nodeDetailCpuLabel;
+
+  /// No description provided for @nodeDetailCoresLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cores / threads'**
+  String get nodeDetailCoresLabel;
+
+  /// No description provided for @nodeDetailRamTotalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'RAM total'**
+  String get nodeDetailRamTotalLabel;
+
+  /// No description provided for @nodeDetailKernelLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Kernel'**
+  String get nodeDetailKernelLabel;
+
+  /// No description provided for @nodeDetailGpuLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'GPU'**
+  String get nodeDetailGpuLabel;
+
+  /// No description provided for @nodeDetailScannedAtLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Scanned at'**
+  String get nodeDetailScannedAtLabel;
+
+  /// No description provided for @nodeDetailDisksTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Disks'**
+  String get nodeDetailDisksTitle;
+
+  /// No description provided for @nodeDetailServersTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Minecraft servers'**
+  String get nodeDetailServersTitle;
+
+  /// No description provided for @nodeDetailNoServers.
+  ///
+  /// In en, this message translates to:
+  /// **'No Minecraft servers are linked to this node.'**
+  String get nodeDetailNoServers;
+
+  /// No description provided for @nodeDetailSectionUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'This section is unavailable on the backend right now.'**
+  String get nodeDetailSectionUnavailable;
+
+  /// No description provided for @commonUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Unavailable'**
+  String get commonUnavailable;
+
+  /// No description provided for @commonEnabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Enabled'**
+  String get commonEnabled;
+
+  /// No description provided for @commonDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Disabled'**
+  String get commonDisabled;
+
+  /// No description provided for @serverActionRedeployedMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Redeploy started'**
+  String get serverActionRedeployedMessage;
+
+  /// No description provided for @serverDetailRedeployAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Redeploy'**
+  String get serverDetailRedeployAction;
+
+  /// No description provided for @serverConsoleServerDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Server console'**
+  String get serverConsoleServerDetail;
+
+  /// No description provided for @serverBackupsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Backups'**
+  String get serverBackupsTitle;
+
+  /// No description provided for @serverDetailDeployTargetLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Deploy target'**
+  String get serverDetailDeployTargetLabel;
+
+  /// No description provided for @serverDetailPortLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Game port'**
+  String get serverDetailPortLabel;
+
+  /// No description provided for @serverDetailBackupsEnabledLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Backups enabled'**
+  String get serverDetailBackupsEnabledLabel;
+
+  /// No description provided for @metricsUnavailableMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Metrics are not available for this server yet.'**
+  String get metricsUnavailableMessage;
+
+  /// No description provided for @serverDetailReadOnlyHint.
+  ///
+  /// In en, this message translates to:
+  /// **'This server is available in read-only mode on mobile.'**
+  String get serverDetailReadOnlyHint;
+
+  /// No description provided for @metricsLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load metrics'**
+  String get metricsLoadError;
+
+  /// No description provided for @logsLiveStatus.
+  ///
+  /// In en, this message translates to:
+  /// **'Live stream active'**
+  String get logsLiveStatus;
+
+  /// No description provided for @serverConsoleCommandHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a console command'**
+  String get serverConsoleCommandHint;
+
+  /// No description provided for @serverConsoleReadOnlyMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Your role allows viewing console output, but not sending commands.'**
+  String get serverConsoleReadOnlyMessage;
+
+  /// No description provided for @backupsCreateSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup creation started'**
+  String get backupsCreateSuccess;
+
+  /// No description provided for @backupsRestoreTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore backup'**
+  String get backupsRestoreTitle;
+
+  /// No description provided for @backupsRestoreConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Restore this backup to the server?'**
+  String get backupsRestoreConfirm;
+
+  /// No description provided for @backupsRestoreSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup restored'**
+  String get backupsRestoreSuccess;
+
+  /// No description provided for @backupsDeleteTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete backup'**
+  String get backupsDeleteTitle;
+
+  /// No description provided for @backupsDeleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this backup permanently?'**
+  String get backupsDeleteConfirm;
+
+  /// No description provided for @backupsDeleteSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup deleted'**
+  String get backupsDeleteSuccess;
+
+  /// No description provided for @confirmCommon.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm'**
+  String get confirmCommon;
+
+  /// No description provided for @backupsCreateAction.
+  ///
+  /// In en, this message translates to:
+  /// **'Create backup'**
+  String get backupsCreateAction;
+
+  /// No description provided for @backupsFeatureDisabledMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic backups are disabled for this server. You can still review existing backups.'**
+  String get backupsFeatureDisabledMessage;
+
+  /// No description provided for @serverBackupsEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No backups available yet.'**
+  String get serverBackupsEmpty;
+
+  /// No description provided for @serverBackupsLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load backups'**
+  String get serverBackupsLoadError;
 }
 
 class _AppLocalizationsDelegate

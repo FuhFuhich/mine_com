@@ -191,7 +191,7 @@ class _LinuxConsoleFragmentState extends State<LinuxConsoleFragment> {
             ),
           if (!_isConnected && !_isConnecting)
             IconButton(
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(Icons.link),
               onPressed: _connectToServer,
               tooltip: l10n.reconnectLinuxConsole,
             ),
@@ -281,7 +281,7 @@ class _LinuxConsoleFragmentState extends State<LinuxConsoleFragment> {
             const SizedBox(height: 32),
             ElevatedButton.icon(
               onPressed: _connectToServer,
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(Icons.link),
               label: Text(l10n.tryAgainLinuxConsole),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(

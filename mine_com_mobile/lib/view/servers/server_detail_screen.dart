@@ -1,156 +1,251 @@
 import 'package:flutter/material.dart';
-import '../../model/minecraft_server_model.dart';
-import '../../model/linux_server_model.dart';
-import 'build fragments/metrics_fragment.dart';
-import 'build fragments/linux_console_fragment.dart';
-import 'build fragments/server_logs_fragment.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mine_com_mobile/l10n/app_localizations.dart';
 
-class ServerDetailScreen extends StatefulWidget {
+import '../../model/minecraft_server_model.dart';
+import '../../model/metrics_model.dart';
+import '../../model/node_model.dart';
+import '../../provider/app_dependencies.dart';
+import '../../provider/metrics_provider.dart';
+import '../../provider/minecraft_server_provider.dart';
+import '../../services/api_exception.dart';
+import 'backups_screen.dart';
+import 'build fragments/metrics_fragment.dart';
+import 'build fragments/server_logs_fragment.dart';
+import 'server_console_screen.dart';
+import 'config_files_screen.dart';
+
+class ServerDetailScreen extends ConsumerStatefulWidget {
+  const ServerDetailScreen({
+    super.key,
+    required this.server,
+  });
+
   final MinecraftServerModel server;
 
-  const ServerDetailScreen({super.key, required this.server});
-
   @override
-  State<ServerDetailScreen> createState() => _ServerDetailScreenState();
+  ConsumerState<ServerDetailScreen> createState() => _ServerDetailScreenState();
 }
 
-class _ServerDetailScreenState extends State<ServerDetailScreen> {
-  late MinecraftServerModel _server;
+class _ServerDetailScreenState extends ConsumerState<ServerDetailScreen> {
+  bool _isRunningAction = false;
 
-  @override
-  void initState() {
-    super.initState();
-    _server = widget.server;
+  Future<void> _refresh() async {
+    ref.invalidate(serverListPageProvider);
+    ref.invalidate(latestMetricsProvider(widget.server.id));
+    await Future.wait([
+      ref.read(serverListPageProvider.future),
+      ref.read(latestMetricsProvider(widget.server.id).future),
+    ]);
   }
 
-  void _handleAction(String action) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$action: ${_server.name}'),
-        duration: const Duration(milliseconds: 800),
-      ),
-    );
+  Future<void> _runAction({
+    required Future<void> Function() action,
+    required String successMessage,
+  }) async {
+    if (_isRunningAction) {
+      return;
+    }
+
+    setState(() => _isRunningAction = true);
+
+    try {
+      await action();
+      if (!mounted) {
+        return;
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(successMessage)),
+      );
+      await _refresh();
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+
+      final message = error is ApiException ? error.message : error.toString();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isRunningAction = false);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    
-    // -----------------------------------------------------------------------------------------------------------------------
-    // Данные из бд
-    // -----------------------------------------------------------------------------------------------------------------------
+    final latestServer =
+        ref.watch(serverByIdProvider(widget.server.id)) ?? widget.server;
+    final role = ref.watch(nodeRoleByServerIdProvider(widget.server.id));
+    final metricsAsync = ref.watch(latestMetricsProvider(widget.server.id));
+    final metrics = metricsAsync.valueOrNull;
 
-    final serverName = _server.name;
-    final serverStatus = 'Онлайн';
-    final minecraftVersion = '1.20.1';
-    final modLoader = 'Forge';
-    final activePlayers = 12;
-    final allocatedCores = 4;
-    final allocatedRam = 8;
-    final cpuUsage = 45.5;
-    final memoryUsage = 65.3;
-    final dateUp = DateTime.now().subtract(const Duration(hours: 3, minutes: 45));
-    
-    // Вычисляем uptime
-    final uptimeDuration = DateTime.now().difference(dateUp);
-    final uptimeString = '${uptimeDuration.inHours}${l10n.hServerDetail} ${uptimeDuration.inMinutes.remainder(60)}${l10n.mServerDetail}';
-    final startTimeString = '${dateUp.hour.toString().padLeft(2, '0')}:${dateUp.minute.toString().padLeft(2, '0')}';
- 
-    // SSH данные для консоли
-    final sshHost = '95.165.27.159';
-    final sshPort = 22;
-    final sshUsername = 'sha';
-    final sshPassword = 'sharoot';
-
-    // -----------------------------------------------------------------------------------------------------------------------
-    // Данные из бд
-    // -----------------------------------------------------------------------------------------------------------------------
-    
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          serverName,
+          latestServer.name,
           style: theme.textTheme.titleLarge,
         ),
+
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
           children: [
-            _buildStatusCard(context, serverStatus, uptimeString, startTimeString, l10n),
-            const SizedBox(height: 20),
-
-            _buildInfoSection(
-              context,
-              minecraftVersion,
-              modLoader,
-              activePlayers,
-              allocatedCores,
-              allocatedRam,
-              l10n
+            _StatusCard(
+              server: latestServer,
+              metrics: metrics,
             ),
             const SizedBox(height: 20),
-
-            _buildMetricsPreview(context, cpuUsage, memoryUsage, l10n),
+            _ServerInfoSection(server: latestServer),
             const SizedBox(height: 20),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildControlButton(
-                  context,
-                  icon: Icons.play_arrow,
-                  label: l10n.startServerDetailServerDetail,
-                  onPressed: () => _handleAction('Запуск'),
-                ),
-                _buildControlButton(
-                  context,
-                  icon: Icons.stop,
-                  label: l10n.stopServerDetail,
-                  onPressed: () => _handleAction('Остановка'),
-                  isDanger: true,
-                ),
-                _buildControlButton(
-                  context,
-                  icon: Icons.refresh,
-                  label: l10n.restartServerDetail,
-                  onPressed: () => _handleAction('Перезагрузка'),
-                ),
-              ],
+            _MetricsPreview(
+              metrics: metrics,
+              loadError: metricsAsync.hasError ? metricsAsync.error.toString() : null,
             ),
             const SizedBox(height: 20),
-
-            _buildMetricsButton(context, l10n),
-            const SizedBox(height: 12),
-            _buildConsoleButton(
-              context,
-              serverName,
-              sshHost,
-              sshPort,
-              sshUsername,
-              sshPassword,
-              l10n
+            if (role?.canManageServerLifecycle == true)
+              _LifecycleActions(
+                isBusy: _isRunningAction,
+                onStart: () => _runAction(
+                  action: () => ref
+                      .read(minecraftServerRepositoryProvider)
+                      .startServer(latestServer.id),
+                  successMessage: l10n.serverActionStartedMessage,
+                ),
+                onStop: () => _runAction(
+                  action: () => ref
+                      .read(minecraftServerRepositoryProvider)
+                      .stopServer(latestServer.id),
+                  successMessage: l10n.serverActionStoppedMessage,
+                ),
+                onRestart: () => _runAction(
+                  action: () => ref
+                      .read(minecraftServerRepositoryProvider)
+                      .restartServer(latestServer.id),
+                  successMessage: l10n.serverActionRestartedMessage,
+                ),
+              )
+            else
+              _ReadOnlyHint(role: role),
+            if (role?.canRedeploy == true) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _isRunningAction
+                    ? null
+                    : () => _runAction(
+                          action: () => ref
+                              .read(minecraftServerRepositoryProvider)
+                              .redeployServer(latestServer.id),
+                          successMessage: l10n.serverActionRedeployedMessage,
+                        ),
+                icon: const Icon(Icons.system_update_alt),
+                label: Text(l10n.serverDetailRedeployAction),
+              ),
+            ],
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => MetricsFragment(server: latestServer),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.show_chart),
+              label: Text(l10n.detailedMetricsServerDetail),
             ),
             const SizedBox(height: 12),
-            _buildLogsButton(context, l10n),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ServerConsoleScreen(
+                      server: latestServer,
+                      role: role,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.terminal),
+              label: Text(l10n.serverConsoleServerDetail),
+            ),
             const SizedBox(height: 12),
-            _buildBackupButton(context, l10n),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ServerLogsFragment(server: latestServer),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.history),
+              label: Text(l10n.serverLogsServerDetail),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => BackupsScreen(
+                      server: latestServer,
+                      role: role,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(Icons.backup_outlined),
+              label: Text(l10n.serverBackupsTitle),
+            ),
+            if (role?.canViewConfigs == true) ...[
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => ConfigFilesScreen(
+                        server: latestServer,
+                        role: role,
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.edit_note_outlined),
+                label: const Text('Изменить конфиги'),
+              ),
+            ],
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildStatusCard(BuildContext context, String status, String uptime, String startTime, AppLocalizations l10n) {
+class _StatusCard extends StatelessWidget {
+  const _StatusCard({
+    required this.server,
+    required this.metrics,
+  });
+
+  final MinecraftServerModel server;
+  final ServerMetricsModel? metrics;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final tt = theme.textTheme;
-    
-    final isOnline = status == l10n.onlineServerDetail;
-    final statusColor = isOnline ? cs.primary : cs.error;
+    final l10n = AppLocalizations.of(context)!;
+    final isOnline = server.normalizedStatus == 'online';
+    final statusColor =
+        isOnline ? theme.colorScheme.primary : theme.colorScheme.error;
+    final uptime = _formatUptime(metrics?.uptimeSeconds, l10n);
+    final startedAt = _formatStartedAt(metrics?.uptimeSeconds);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -173,12 +268,12 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
               children: [
                 Text(
                   l10n.serverStatusServerDetail,
-                  style: tt.bodySmall?.copyWith(fontSize: 12),
+                  style: theme.textTheme.bodySmall?.copyWith(fontSize: 12),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  status,
-                  style: tt.titleLarge?.copyWith(
+                  _statusLabel(l10n, server.normalizedStatus),
+                  style: theme.textTheme.titleLarge?.copyWith(
                     color: statusColor,
                     fontWeight: FontWeight.bold,
                   ),
@@ -186,17 +281,17 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    Icon(Icons.timer, size: 16, color: theme.textTheme.bodyMedium?.color),
+                    const Icon(Icons.timer, size: 16),
                     const SizedBox(width: 4),
-                    Text('${l10n.worksServerDetail} $uptime', style: tt.bodyMedium),
+                    Text('${l10n.worksServerDetail} $uptime'),
                   ],
                 ),
                 const SizedBox(height: 2),
                 Row(
                   children: [
-                    Icon(Icons.access_time, size: 16, color: theme.textTheme.bodyMedium?.color),
+                    const Icon(Icons.access_time, size: 16),
                     const SizedBox(width: 4),
-                    Text('${l10n.launchedServerDetail} $startTime', style: tt.bodyMedium),
+                    Text('${l10n.launchedServerDetail} $startedAt'),
                   ],
                 ),
               ],
@@ -207,24 +302,77 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
     );
   }
 
-  Widget _buildInfoSection(
-    BuildContext context,
-    String version,
-    String modLoader,
-    int players,
-    int cores,
-    int ram,
-    AppLocalizations l10n
-  ) {
-    final theme = Theme.of(context);
-    final tt = theme.textTheme;
+  String _formatUptime(int? uptimeSeconds, AppLocalizations l10n) {
+    if (uptimeSeconds == null || uptimeSeconds <= 0) {
+      return l10n.commonUnavailable;
+    }
 
-    final items = [
-      (l10n.minecraftVersionServerDetail, version),
-      (l10n.modLoaderServerDetail, modLoader),
-      (l10n.activePlayersServerDetail, '$players'),
-      (l10n.dedicatedCoresServerDetail, '$cores ядер'),
-      (l10n.dedicatedRamServerDetail, '$ram GB'),
+    final duration = Duration(seconds: uptimeSeconds);
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    return '$hours${l10n.hServerDetail} $minutes${l10n.mServerDetail}';
+  }
+
+  String _formatStartedAt(int? uptimeSeconds) {
+    if (uptimeSeconds == null || uptimeSeconds <= 0) {
+      return '-';
+    }
+
+    final startedAt = DateTime.now().subtract(Duration(seconds: uptimeSeconds));
+    return '${startedAt.hour.toString().padLeft(2, '0')}:'
+        '${startedAt.minute.toString().padLeft(2, '0')}';
+  }
+
+  String _statusLabel(AppLocalizations l10n, String status) {
+    switch (status) {
+      case 'online':
+        return l10n.onlineServerList;
+      case 'offline':
+        return l10n.offlineServerList;
+      case 'starting':
+        return l10n.serverStatusStarting;
+      case 'stopping':
+        return l10n.serverStatusStopping;
+      case 'restarting':
+        return l10n.serverStatusRestarting;
+      case 'deploying':
+        return l10n.serverStatusDeploying;
+      case 'undeployed':
+        return l10n.serverStatusUndeployed;
+      case 'crashed':
+        return l10n.serverStatusCrashed;
+      case 'error':
+      default:
+        return l10n.serverStatusError;
+    }
+  }
+}
+
+class _ServerInfoSection extends StatelessWidget {
+  const _ServerInfoSection({required this.server});
+
+  final MinecraftServerModel server;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    final items = <MapEntry<String, String>>[
+      MapEntry(l10n.minecraftVersionServerDetail, server.versionLabel),
+      MapEntry(l10n.serverDetailDeployTargetLabel, server.deployTarget),
+      if (server.gamePort != null)
+        MapEntry(l10n.serverDetailPortLabel, server.gamePort.toString()),
+      if (server.cpuCores != null)
+        MapEntry(l10n.dedicatedCoresServerDetail, '${server.cpuCores}'),
+      if (server.ramMb != null)
+        MapEntry(l10n.dedicatedRamServerDetail, '${server.ramMb} MB'),
+      if (server.diskMb != null)
+        MapEntry(l10n.nodeDetailDiskLabel, '${server.diskMb} MB'),
+      MapEntry(
+        l10n.serverDetailBackupsEnabledLabel,
+        server.backupEnabled ? l10n.commonEnabled : l10n.commonDisabled,
+      ),
     ];
 
     return Container(
@@ -239,35 +387,52 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
         children: [
           Text(
             l10n.serverInformationServerDetail,
-            style: tt.titleLarge,
+            style: theme.textTheme.titleLarge,
           ),
           const SizedBox(height: 12),
-          ...items.map((item) => Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  item.$1,
-                  style: tt.bodyMedium?.copyWith(fontSize: 14),
-                ),
-                Text(
-                  item.$2,
-                  style: tt.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
+          ...items.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      item.key,
+                      style: theme.textTheme.bodyMedium?.copyWith(fontSize: 14),
+                    ),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 12),
+                  Text(
+                    item.value,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          )),
+          ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildMetricsPreview(BuildContext context, double cpu, double memory, AppLocalizations l10n) {
+class _MetricsPreview extends StatelessWidget {
+  const _MetricsPreview({
+    required this.metrics,
+    required this.loadError,
+  });
+
+  final ServerMetricsModel? metrics;
+  final String? loadError;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -284,21 +449,69 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
             style: theme.textTheme.titleLarge,
           ),
           const SizedBox(height: 16),
-          _buildMetricRow(context, l10n.cpuServerDetail, cpu),
-          const SizedBox(height: 12),
-          _buildMetricRow(context, l10n.ramServerDetail, memory),
+          if (loadError != null)
+            Text(
+              loadError!,
+              style: TextStyle(color: theme.colorScheme.error),
+            )
+          else if (metrics == null)
+            Text(l10n.metricsUnavailableMessage)
+          else ...[
+            _MetricRow(
+              label: l10n.cpuServerDetail,
+              value: metrics!.cpuUsagePercent,
+            ),
+            const SizedBox(height: 12),
+            _MetricRow(
+              label: l10n.ramServerDetail,
+              value: metrics!.ramUsagePercent,
+            ),
+            const SizedBox(height: 12),
+            _MetricRow(
+              label: l10n.nodeDetailDiskLabel,
+              value: metrics!.diskUsagePercent,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '${l10n.activePlayersServerDetail}: '
+                    '${metrics!.playersOnline ?? 0}',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ),
+                if (metrics!.tps != null)
+                  Expanded(
+                    child: Text(
+                      'TPS: ${metrics!.tps!.toStringAsFixed(2)}',
+                      style: theme.textTheme.bodySmall,
+                      textAlign: TextAlign.end,
+                    ),
+                  ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
+}
 
-  Widget _buildMetricRow(BuildContext context, String label, double value) {
+class _MetricRow extends StatelessWidget {
+  const _MetricRow({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final double value;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final tt = theme.textTheme;
-
-    final isHighUsage = value > 80;
-    final progressColor = isHighUsage ? cs.error : cs.primary;
+    final progressColor =
+        value > 80 ? theme.colorScheme.error : theme.colorScheme.primary;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -306,163 +519,133 @@ class _ServerDetailScreenState extends State<ServerDetailScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              label,
-              style: tt.bodySmall?.copyWith(fontSize: 12),
-            ),
-            Text(
-              '${value.toStringAsFixed(1)}%',
-              style: tt.bodySmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-              ),
-            ),
+            Text(label, style: theme.textTheme.bodySmall),
+            Text('${value.toStringAsFixed(1)}%'),
           ],
         ),
         const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: value / 100,
-            minHeight: 6,
-            backgroundColor: theme.dividerColor,
-            valueColor: AlwaysStoppedAnimation<Color>(progressColor),
-          ),
+        LinearProgressIndicator(
+          value: value / 100,
+          minHeight: 8,
+          color: progressColor,
         ),
       ],
     );
   }
+}
 
-  Widget _buildControlButton(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required VoidCallback onPressed,
-    bool isDanger = false,
-  }) {
+class _LifecycleActions extends StatelessWidget {
+  const _LifecycleActions({
+    required this.isBusy,
+    required this.onStart,
+    required this.onStop,
+    required this.onRestart,
+  });
+
+  final bool isBusy;
+  final VoidCallback onStart;
+  final VoidCallback onStop;
+  final VoidCallback onRestart;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        _ControlButton(
+          icon: Icons.play_arrow,
+          label: l10n.startServerDetailServerDetail,
+          onPressed: isBusy ? null : onStart,
+          color: Colors.green,
+        ),
+        _ControlButton(
+          icon: Icons.stop,
+          label: l10n.stopServerDetail,
+          onPressed: isBusy ? null : onStop,
+          color: Colors.red,
+        ),
+        _ControlButton(
+          icon: Icons.restart_alt,
+          label: l10n.restartServerDetail,
+          onPressed: isBusy ? null : onRestart,
+          color: Colors.orange,
+        ),
+      ],
+    );
+  }
+}
+
+class _ControlButton extends StatelessWidget {
+  const _ControlButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback? onPressed;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final tt = theme.textTheme;
-    
-    final buttonColor = isDanger ? cs.error : cs.primary;
 
     return Column(
-      mainAxisSize: MainAxisSize.min,
       children: [
         GestureDetector(
           onTap: onPressed,
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: buttonColor.withOpacity(0.2),
+              color: color.withOpacity(0.15),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(icon, color: buttonColor, size: 24),
+            child: Icon(icon, color: color, size: 24),
           ),
         ),
         const SizedBox(height: 6),
         Text(
           label,
-          style: tt.bodySmall?.copyWith(fontSize: 11),
+          style: theme.textTheme.bodySmall,
         ),
       ],
     );
   }
+}
 
-  Widget _buildMetricsButton(BuildContext context, AppLocalizations l10n) {
-    return ElevatedButton.icon(
-      onPressed: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => MetricsFragment(server: _server),
-          ),
-        );
-      },
-      icon: const Icon(Icons.show_chart),
-      label: Text(l10n.detailedMetricsServerDetail),
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+class _ReadOnlyHint extends StatelessWidget {
+  const _ReadOnlyHint({required this.role});
+
+  final NodeRole? role;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.dividerColor),
       ),
-    );
-  }
-
-  Widget _buildConsoleButton(
-    BuildContext context,
-    String serverName,
-    String host,
-    int port,
-    String username,
-    String password,
-    AppLocalizations l10n
-  ) {
-    return ElevatedButton.icon(
-      onPressed: () {
-        final linuxServer = LinuxServerModel(
-          id: '1',
-          name: serverName,
-          host: host,
-          port: port,
-          username: username,
-          password: password,
-        );
-        
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => LinuxConsoleFragment(server: linuxServer),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, color: theme.colorScheme.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              role == null
+                  ? l10n.serverDetailReadOnlyHint
+                  : '${l10n.serverDetailReadOnlyHint} (${role!.name.toUpperCase()})',
+            ),
           ),
-        );
-      },
-      icon: const Icon(Icons.terminal),
-      label: Text(l10n.linuxConsoleServerDetail),
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLogsButton(BuildContext context, AppLocalizations l10n) {
-    return ElevatedButton.icon(
-      onPressed: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => ServerLogsFragment(server: _server),
-          ),
-        );
-      },
-      icon: const Icon(Icons.history),
-      label: Text(l10n.serverLogsServerDetail),
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBackupButton(BuildContext context, AppLocalizations l10n) {
-    return ElevatedButton.icon(
-      onPressed: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Бэкап будет реализован позже'),
-            duration: Duration(milliseconds: 800),
-          ),
-        );
-      },
-      icon: const Icon(Icons.backup),
-      label: Text(l10n.creatingServerBackupServerDetail),
-      style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        ],
       ),
     );
   }

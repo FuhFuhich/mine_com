@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mine_com_mobile/l10n/app_localizations.dart';
+
+import 'provider/auth_provider.dart';
+import 'provider/language_provider.dart';
+import 'provider/settings_provider.dart';
+import 'services/notification_service.dart';
+import 'theme/app_theme.dart';
 import 'view/auth/login_screen.dart';
 import 'view/main/home_screen.dart';
-import 'theme/app_theme.dart';
-import '../../provider/settings_provider.dart';
-import '../../provider/auth_provider.dart';
-import '../../provider/language_provider.dart';
-import '../services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,11 +22,12 @@ class MyApp extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isLoggedIn = ref.watch(authProvider);
+    final authState = ref.watch(authProvider);
     final locale = ref.watch(localeProvider);
 
     return MaterialApp(
-      title: 'Auth Demo',
+      title: 'Mine Com Mobile',
+      debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ref.watch(darkThemeProvider) ? ThemeMode.dark : ThemeMode.light,
@@ -37,7 +39,24 @@ class MyApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      home: isLoggedIn ? const HomeScreen() : const LoginScreen(),
+      home: authState.isInitializing
+          ? const _StartupScreen()
+          : authState.isAuthenticated
+              ? const HomeScreen()
+              : const LoginScreen(),
+    );
+  }
+}
+
+class _StartupScreen extends StatelessWidget {
+  const _StartupScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(
+        child: CircularProgressIndicator(),
+      ),
     );
   }
 }

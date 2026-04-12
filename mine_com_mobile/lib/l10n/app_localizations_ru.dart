@@ -448,4 +448,308 @@ class AppLocalizationsRu extends AppLocalizations {
 
   @override
   String get maxRamMetricsFragment => 'Макс ОП';
+
+  @override
+  String get authLoginTitle => 'Вход в аккаунт';
+
+  @override
+  String get authIdentityLabel => 'Email, логин или телефон';
+
+  @override
+  String get authIdentityHint => 'Введите идентификатор';
+
+  @override
+  String get authIdentityRequired => 'Введите email, логин или телефон';
+
+  @override
+  String get authPasswordLabel => 'Пароль';
+
+  @override
+  String get authPasswordRequired => 'Введите пароль';
+
+  @override
+  String get authRememberMe => 'Запомнить меня';
+
+  @override
+  String get authLoginButton => 'Войти';
+
+  @override
+  String get authRegisterLink => 'Нет аккаунта? Зарегистрироваться';
+
+  @override
+  String get authGenericError => 'Что-то пошло не так. Попробуйте ещё раз.';
+
+  @override
+  String get authRegisterTitle => 'Создание аккаунта';
+
+  @override
+  String get authUsernameLabel => 'Логин';
+
+  @override
+  String get authUsernameRequired => 'Введите логин';
+
+  @override
+  String get authEmailOptionalLabel => 'Email (необязательно)';
+
+  @override
+  String get authEmailInvalid => 'Введите корректный email';
+
+  @override
+  String get authPasswordTooShort => 'Пароль должен быть не короче 6 символов';
+
+  @override
+  String get authConfirmPasswordLabel => 'Повторите пароль';
+
+  @override
+  String get authPasswordsDoNotMatch => 'Пароли не совпадают';
+
+  @override
+  String get authAcceptTerms => 'Я принимаю условия использования';
+
+  @override
+  String get authCreateAccountButton => 'Создать аккаунт';
+
+  @override
+  String get authBackToLogin => 'Уже есть аккаунт? Войти';
+
+  @override
+  String get authAcceptTermsError => 'Примите условия использования';
+
+  @override
+  String get profileJoinedLabel => 'Зарегистрирован';
+
+  @override
+  String get profileNodesLabel => 'Ноды онлайн/всего';
+
+  @override
+  String get profileDiskLabel => 'Средняя нагрузка диска';
+
+  @override
+  String get profileBackupsLabel => 'Бэкапы';
+
+  @override
+  String get profileCrashesLabel => 'Сбоев за 24ч';
+
+  @override
+  String get profileLoadError => 'Не удалось загрузить профиль';
+
+  @override
+  String get retryCommon => 'Повторить';
+
+  @override
+  String get serverListLoadError => 'Не удалось загрузить ноды и серверы';
+
+  @override
+  String get serverListNodesSectionTitle => 'Ноды';
+
+  @override
+  String get serverListNodeRoleLabel => 'Роль';
+
+  @override
+  String get serverListNodeAddressLabel => 'Адрес';
+
+  @override
+  String get serverListNodeServersLabel => 'Серверы';
+
+  @override
+  String get serverListNoNodes => 'Для этого аккаунта пока нет доступных нод.';
+
+  @override
+  String get serverListEmptyDescription =>
+      'У этого аккаунта пока нет доступных Minecraft-серверов.';
+
+  @override
+  String get serverListReadOnlyRole => 'Только просмотр';
+
+  @override
+  String get serverActionStartedMessage => 'Команда запуска отправлена';
+
+  @override
+  String get serverActionStoppedMessage => 'Команда остановки отправлена';
+
+  @override
+  String get serverActionRestartedMessage => 'Команда перезапуска отправлена';
+
+  @override
+  String get serverStatusStarting => 'Запускается';
+
+  @override
+  String get serverStatusStopping => 'Останавливается';
+
+  @override
+  String get serverStatusRestarting => 'Перезапускается';
+
+  @override
+  String get serverStatusDeploying => 'Разворачивается';
+
+  @override
+  String get serverStatusUndeployed => 'Не развернут';
+
+  @override
+  String get serverStatusCrashed => 'Упал';
+
+  @override
+  String get serverStatusError => 'Ошибка';
+
+  @override
+  String get nodeDetailTitle => 'Нода';
+
+  @override
+  String get nodeDetailLoadError => 'Не удалось загрузить данные ноды';
+
+  @override
+  String get nodeDetailOsLabel => 'Операционная система';
+
+  @override
+  String get nodeDetailSshUserLabel => 'SSH-пользователь';
+
+  @override
+  String get nodeDetailSshPortLabel => 'SSH-порт';
+
+  @override
+  String get nodeDetailAuthLabel => 'Тип авторизации';
+
+  @override
+  String get nodeDetailDescriptionLabel => 'Описание';
+
+  @override
+  String get nodeDetailUsageTitle => 'Текущая загрузка';
+
+  @override
+  String get nodeDetailDiskLabel => 'Диск';
+
+  @override
+  String get nodeDetailContainersLabel => 'Контейнеры';
+
+  @override
+  String get nodeDetailNetworkRxLabel => 'Сеть RX';
+
+  @override
+  String get nodeDetailNetworkTxLabel => 'Сеть TX';
+
+  @override
+  String get nodeDetailCollectedAtLabel => 'Собрано';
+
+  @override
+  String get nodeDetailHardwareTitle => 'Аппаратная конфигурация';
+
+  @override
+  String get nodeDetailCpuLabel => 'CPU';
+
+  @override
+  String get nodeDetailCoresLabel => 'Ядра / потоки';
+
+  @override
+  String get nodeDetailRamTotalLabel => 'Всего RAM';
+
+  @override
+  String get nodeDetailKernelLabel => 'Ядро';
+
+  @override
+  String get nodeDetailGpuLabel => 'GPU';
+
+  @override
+  String get nodeDetailScannedAtLabel => 'Сканировано';
+
+  @override
+  String get nodeDetailDisksTitle => 'Диски';
+
+  @override
+  String get nodeDetailServersTitle => 'Minecraft-серверы';
+
+  @override
+  String get nodeDetailNoServers =>
+      'К этой ноде не привязано ни одного Minecraft-сервера.';
+
+  @override
+  String get nodeDetailSectionUnavailable =>
+      'Этот раздел сейчас недоступен на backend.';
+
+  @override
+  String get commonUnavailable => 'Недоступно';
+
+  @override
+  String get commonEnabled => 'Включено';
+
+  @override
+  String get commonDisabled => 'Выключено';
+
+  @override
+  String get serverActionRedeployedMessage => 'Переустановка запущена';
+
+  @override
+  String get serverDetailRedeployAction => 'Переустановить';
+
+  @override
+  String get serverConsoleServerDetail => 'Консоль сервера';
+
+  @override
+  String get serverBackupsTitle => 'Бэкапы';
+
+  @override
+  String get serverDetailDeployTargetLabel => 'Тип развертывания';
+
+  @override
+  String get serverDetailPortLabel => 'Игровой порт';
+
+  @override
+  String get serverDetailBackupsEnabledLabel => 'Бэкапы включены';
+
+  @override
+  String get metricsUnavailableMessage =>
+      'Для этого сервера пока нет доступных метрик.';
+
+  @override
+  String get serverDetailReadOnlyHint =>
+      'Этот сервер доступен в мобильной версии только для просмотра.';
+
+  @override
+  String get metricsLoadError => 'Не удалось загрузить метрики';
+
+  @override
+  String get logsLiveStatus => 'Live-стрим активен';
+
+  @override
+  String get serverConsoleCommandHint => 'Введите команду консоли';
+
+  @override
+  String get serverConsoleReadOnlyMessage =>
+      'Ваша роль позволяет просматривать консоль, но не отправлять команды.';
+
+  @override
+  String get backupsCreateSuccess => 'Создание бэкапа запущено';
+
+  @override
+  String get backupsRestoreTitle => 'Восстановление бэкапа';
+
+  @override
+  String get backupsRestoreConfirm => 'Восстановить этот бэкап на сервер?';
+
+  @override
+  String get backupsRestoreSuccess => 'Бэкап восстановлен';
+
+  @override
+  String get backupsDeleteTitle => 'Удаление бэкапа';
+
+  @override
+  String get backupsDeleteConfirm => 'Удалить этот бэкап безвозвратно?';
+
+  @override
+  String get backupsDeleteSuccess => 'Бэкап удалён';
+
+  @override
+  String get confirmCommon => 'Подтвердить';
+
+  @override
+  String get backupsCreateAction => 'Создать бэкап';
+
+  @override
+  String get backupsFeatureDisabledMessage =>
+      'Автоматические бэкапы для этого сервера выключены. Вы всё равно можете просматривать уже созданные бэкапы.';
+
+  @override
+  String get serverBackupsEmpty => 'Бэкапы пока отсутствуют.';
+
+  @override
+  String get serverBackupsLoadError => 'Не удалось загрузить бэкапы';
 }

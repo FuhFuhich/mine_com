@@ -448,4 +448,309 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get maxRamMetricsFragment => 'Max RAM';
+
+  @override
+  String get authLoginTitle => 'Sign in';
+
+  @override
+  String get authIdentityLabel => 'Email, username or phone';
+
+  @override
+  String get authIdentityHint => 'Enter your identity';
+
+  @override
+  String get authIdentityRequired => 'Enter your email, username or phone';
+
+  @override
+  String get authPasswordLabel => 'Password';
+
+  @override
+  String get authPasswordRequired => 'Enter your password';
+
+  @override
+  String get authRememberMe => 'Remember me';
+
+  @override
+  String get authLoginButton => 'Sign in';
+
+  @override
+  String get authRegisterLink => 'No account? Create one';
+
+  @override
+  String get authGenericError => 'Something went wrong. Please try again.';
+
+  @override
+  String get authRegisterTitle => 'Create account';
+
+  @override
+  String get authUsernameLabel => 'Username';
+
+  @override
+  String get authUsernameRequired => 'Enter a username';
+
+  @override
+  String get authEmailOptionalLabel => 'Email (optional)';
+
+  @override
+  String get authEmailInvalid => 'Enter a valid email';
+
+  @override
+  String get authPasswordTooShort => 'Password must be at least 6 characters';
+
+  @override
+  String get authConfirmPasswordLabel => 'Confirm password';
+
+  @override
+  String get authPasswordsDoNotMatch => 'Passwords do not match';
+
+  @override
+  String get authAcceptTerms => 'I accept the terms of use';
+
+  @override
+  String get authCreateAccountButton => 'Create account';
+
+  @override
+  String get authBackToLogin => 'Already have an account? Sign in';
+
+  @override
+  String get authAcceptTermsError => 'Please accept the terms of use';
+
+  @override
+  String get profileJoinedLabel => 'Joined';
+
+  @override
+  String get profileNodesLabel => 'Nodes online/total';
+
+  @override
+  String get profileDiskLabel => 'Average disk load';
+
+  @override
+  String get profileBackupsLabel => 'Backups';
+
+  @override
+  String get profileCrashesLabel => 'Crashes in 24h';
+
+  @override
+  String get profileLoadError => 'Failed to load profile data';
+
+  @override
+  String get retryCommon => 'Retry';
+
+  @override
+  String get serverListLoadError => 'Failed to load nodes and servers';
+
+  @override
+  String get serverListNodesSectionTitle => 'Nodes';
+
+  @override
+  String get serverListNodeRoleLabel => 'Role';
+
+  @override
+  String get serverListNodeAddressLabel => 'Address';
+
+  @override
+  String get serverListNodeServersLabel => 'Servers';
+
+  @override
+  String get serverListNoNodes =>
+      'No nodes are available for your account yet.';
+
+  @override
+  String get serverListEmptyDescription =>
+      'This account does not have any Minecraft servers yet.';
+
+  @override
+  String get serverListReadOnlyRole => 'Read-only access';
+
+  @override
+  String get serverActionStartedMessage => 'Start command sent';
+
+  @override
+  String get serverActionStoppedMessage => 'Stop command sent';
+
+  @override
+  String get serverActionRestartedMessage => 'Restart command sent';
+
+  @override
+  String get serverStatusStarting => 'Starting';
+
+  @override
+  String get serverStatusStopping => 'Stopping';
+
+  @override
+  String get serverStatusRestarting => 'Restarting';
+
+  @override
+  String get serverStatusDeploying => 'Deploying';
+
+  @override
+  String get serverStatusUndeployed => 'Undeployed';
+
+  @override
+  String get serverStatusCrashed => 'Crashed';
+
+  @override
+  String get serverStatusError => 'Error';
+
+  @override
+  String get nodeDetailTitle => 'Node';
+
+  @override
+  String get nodeDetailLoadError => 'Failed to load node details';
+
+  @override
+  String get nodeDetailOsLabel => 'Operating system';
+
+  @override
+  String get nodeDetailSshUserLabel => 'SSH user';
+
+  @override
+  String get nodeDetailSshPortLabel => 'SSH port';
+
+  @override
+  String get nodeDetailAuthLabel => 'Auth type';
+
+  @override
+  String get nodeDetailDescriptionLabel => 'Description';
+
+  @override
+  String get nodeDetailUsageTitle => 'Live usage';
+
+  @override
+  String get nodeDetailDiskLabel => 'Disk';
+
+  @override
+  String get nodeDetailContainersLabel => 'Containers';
+
+  @override
+  String get nodeDetailNetworkRxLabel => 'Network RX';
+
+  @override
+  String get nodeDetailNetworkTxLabel => 'Network TX';
+
+  @override
+  String get nodeDetailCollectedAtLabel => 'Collected at';
+
+  @override
+  String get nodeDetailHardwareTitle => 'Hardware';
+
+  @override
+  String get nodeDetailCpuLabel => 'CPU';
+
+  @override
+  String get nodeDetailCoresLabel => 'Cores / threads';
+
+  @override
+  String get nodeDetailRamTotalLabel => 'RAM total';
+
+  @override
+  String get nodeDetailKernelLabel => 'Kernel';
+
+  @override
+  String get nodeDetailGpuLabel => 'GPU';
+
+  @override
+  String get nodeDetailScannedAtLabel => 'Scanned at';
+
+  @override
+  String get nodeDetailDisksTitle => 'Disks';
+
+  @override
+  String get nodeDetailServersTitle => 'Minecraft servers';
+
+  @override
+  String get nodeDetailNoServers =>
+      'No Minecraft servers are linked to this node.';
+
+  @override
+  String get nodeDetailSectionUnavailable =>
+      'This section is unavailable on the backend right now.';
+
+  @override
+  String get commonUnavailable => 'Unavailable';
+
+  @override
+  String get commonEnabled => 'Enabled';
+
+  @override
+  String get commonDisabled => 'Disabled';
+
+  @override
+  String get serverActionRedeployedMessage => 'Redeploy started';
+
+  @override
+  String get serverDetailRedeployAction => 'Redeploy';
+
+  @override
+  String get serverConsoleServerDetail => 'Server console';
+
+  @override
+  String get serverBackupsTitle => 'Backups';
+
+  @override
+  String get serverDetailDeployTargetLabel => 'Deploy target';
+
+  @override
+  String get serverDetailPortLabel => 'Game port';
+
+  @override
+  String get serverDetailBackupsEnabledLabel => 'Backups enabled';
+
+  @override
+  String get metricsUnavailableMessage =>
+      'Metrics are not available for this server yet.';
+
+  @override
+  String get serverDetailReadOnlyHint =>
+      'This server is available in read-only mode on mobile.';
+
+  @override
+  String get metricsLoadError => 'Failed to load metrics';
+
+  @override
+  String get logsLiveStatus => 'Live stream active';
+
+  @override
+  String get serverConsoleCommandHint => 'Enter a console command';
+
+  @override
+  String get serverConsoleReadOnlyMessage =>
+      'Your role allows viewing console output, but not sending commands.';
+
+  @override
+  String get backupsCreateSuccess => 'Backup creation started';
+
+  @override
+  String get backupsRestoreTitle => 'Restore backup';
+
+  @override
+  String get backupsRestoreConfirm => 'Restore this backup to the server?';
+
+  @override
+  String get backupsRestoreSuccess => 'Backup restored';
+
+  @override
+  String get backupsDeleteTitle => 'Delete backup';
+
+  @override
+  String get backupsDeleteConfirm => 'Delete this backup permanently?';
+
+  @override
+  String get backupsDeleteSuccess => 'Backup deleted';
+
+  @override
+  String get confirmCommon => 'Confirm';
+
+  @override
+  String get backupsCreateAction => 'Create backup';
+
+  @override
+  String get backupsFeatureDisabledMessage =>
+      'Automatic backups are disabled for this server. You can still review existing backups.';
+
+  @override
+  String get serverBackupsEmpty => 'No backups available yet.';
+
+  @override
+  String get serverBackupsLoadError => 'Failed to load backups';
 }

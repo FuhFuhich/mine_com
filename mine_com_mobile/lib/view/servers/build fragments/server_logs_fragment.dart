@@ -2,14 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mine_com_mobile/l10n/app_localizations.dart';
+
 import '../../../model/minecraft_server_model.dart';
 import '../../../model/server_log_model.dart';
 import '../../../provider/server_logs_provider.dart';
 
 class ServerLogsFragment extends ConsumerStatefulWidget {
-  final MinecraftServerModel server;
+  const ServerLogsFragment({
+    super.key,
+    required this.server,
+  });
 
-  const ServerLogsFragment({super.key, required this.server});
+  final MinecraftServerModel server;
 
   @override
   ConsumerState<ServerLogsFragment> createState() => _ServerLogsFragmentState();
@@ -18,8 +22,8 @@ class ServerLogsFragment extends ConsumerStatefulWidget {
 class _ServerLogsFragmentState extends ConsumerState<ServerLogsFragment> {
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
-  
-  Set<LogLevel> _selectedLevels = LogLevel.values.toSet();
+
+  final Set<LogLevel> _selectedLevels = LogLevel.values.toSet();
   String _searchQuery = '';
   bool _autoScroll = true;
 
@@ -40,6 +44,10 @@ class _ServerLogsFragmentState extends ConsumerState<ServerLogsFragment> {
     super.dispose();
   }
 
+  Future<void> _refresh() async {
+    await ref.read(serverLogsProvider(widget.server.id).notifier).refresh();
+  }
+
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
       _scrollController.animateTo(
@@ -57,97 +65,57 @@ class _ServerLogsFragmentState extends ConsumerState<ServerLogsFragment> {
           log.message.toLowerCase().contains(_searchQuery) ||
           (log.source?.toLowerCase().contains(_searchQuery) ?? false);
       return levelMatch && searchMatch;
-    }).toList();
+    }).toList(growable: false);
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-
-    // -----------------------------------------------------------------------------------------------------------------------
-    // Данные из бд
-    // -----------------------------------------------------------------------------------------------------------------------
-
-    final serverName = widget.server.name;
-    final allLogs = ref.watch(serverLogsProvider(serverName));
-    final filteredLogs = _filterLogs(allLogs);
-    final totalLogsCount = allLogs.length;
-    final filteredLogsCount = filteredLogs.length;
-
-    // -----------------------------------------------------------------------------------------------------------------------
-    // Данные из бд
-    // -----------------------------------------------------------------------------------------------------------------------
+    final consoleState = ref.watch(serverLogsProvider(widget.server.id));
+    final filteredLogs = _filterLogs(consoleState.logs);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('$serverName - ${l10n.logsServerLogs}'),
+        title: Text('${widget.server.name} - ${l10n.logsServerLogs}'),
         actions: [
           IconButton(
-            icon: Icon(_autoScroll ? Icons.arrow_downward : Icons.arrow_downward_outlined),
+            icon: Icon(
+              _autoScroll ? Icons.arrow_downward : Icons.arrow_downward_outlined,
+            ),
             onPressed: () {
-              setState(() {
-                _autoScroll = !_autoScroll;
-              });
-              if (_autoScroll) _scrollToBottom();
-            },
-            tooltip: _autoScroll 
-              ? l10n.autoscrollIsEnabledServerLogs 
-              : l10n.autoscrollIsDisabledServerLogs,
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              ref.read(serverLogsProvider(serverName).notifier).refresh();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(l10n.logsUpdatedServerLogs),
-                  duration: const Duration(seconds: 1),
-                ),
-              );
-            },
-            tooltip: l10n.refreshLogsServerLogs,
-          ),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'clear') {
-                ref.read(serverLogsProvider(serverName).notifier).clearLogs();
-              } else if (value == 'export') {
-                _showExportDialog(context, allLogs);
+              setState(() => _autoScroll = !_autoScroll);
+              if (_autoScroll) {
+                _scrollToBottom();
               }
             },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'clear',
-                child: Row(
-                  children: [
-                    const Icon(Icons.clear_all, size: 20),
-                    const SizedBox(width: 12),
-                    Text(l10n.clearLogsServerLogs),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'export',
-                child: Row(
-                  children: [
-                    const Icon(Icons.download, size: 20),
-                    const SizedBox(width: 12),
-                    Text(l10n.exportLogsServerLogs),
-                  ],
-                ),
-              ),
-            ],
+            tooltip: _autoScroll
+                ? l10n.autoscrollIsEnabledServerLogs
+                : l10n.autoscrollIsDisabledServerLogs,
           ),
+
         ],
       ),
       body: Column(
         children: [
           _buildSearchBar(theme, l10n),
           _buildFilterChips(theme),
-          _buildLogsInfo(theme, filteredLogsCount, totalLogsCount, l10n),
+          if (consoleState.errorMessage != null)
+            _ErrorBanner(message: consoleState.errorMessage!),
+          _buildLogsInfo(
+            theme,
+            filteredLogs.length,
+            consoleState.logs.length,
+            consoleState.isStreaming,
+            l10n,
+          ),
           Expanded(
-            child: _buildLogsList(theme, filteredLogs, l10n),
+            child: _buildLogsList(
+              theme,
+              filteredLogs,
+              consoleState.isLoading,
+              l10n,
+            ),
           ),
         ],
       ),
@@ -159,9 +127,7 @@ class _ServerLogsFragmentState extends ConsumerState<ServerLogsFragment> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: theme.cardColor,
-        border: Border(
-          bottom: BorderSide(color: theme.dividerColor),
-        ),
+        border: Border(bottom: BorderSide(color: theme.dividerColor)),
       ),
       child: TextField(
         controller: _searchController,
@@ -171,15 +137,12 @@ class _ServerLogsFragmentState extends ConsumerState<ServerLogsFragment> {
           suffixIcon: _searchQuery.isNotEmpty
               ? IconButton(
                   icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    _searchController.clear();
-                  },
+                  onPressed: _searchController.clear,
                 )
               : null,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
           ),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         ),
       ),
     );
@@ -190,9 +153,7 @@ class _ServerLogsFragmentState extends ConsumerState<ServerLogsFragment> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: theme.cardColor,
-        border: Border(
-          bottom: BorderSide(color: theme.dividerColor),
-        ),
+        border: Border(bottom: BorderSide(color: theme.dividerColor)),
       ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -227,50 +188,56 @@ class _ServerLogsFragmentState extends ConsumerState<ServerLogsFragment> {
     );
   }
 
-  Widget _buildLogsInfo(ThemeData theme, int filtered, int total, AppLocalizations l10n) {
+  Widget _buildLogsInfo(
+    ThemeData theme,
+    int filtered,
+    int total,
+    bool isStreaming,
+    AppLocalizations l10n,
+  ) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: theme.cardColor.withOpacity(0.5),
-        border: Border(
-          bottom: BorderSide(color: theme.dividerColor),
-        ),
+        border: Border(bottom: BorderSide(color: theme.dividerColor)),
       ),
       child: Row(
         children: [
-          Icon(Icons.info_outline, size: 16, color: theme.colorScheme.primary),
+          Icon(
+            isStreaming ? Icons.wifi_tethering : Icons.info_outline,
+            size: 16,
+            color: theme.colorScheme.primary,
+          ),
           const SizedBox(width: 8),
-          Text(
-            '${l10n.shownServerLogs} $filtered ${l10n.fromServerLogs} $total ${l10n.recordsServerLogs}',
-            style: theme.textTheme.bodySmall,
+          Expanded(
+            child: Text(
+              isStreaming
+                  ? '${l10n.logsLiveStatus}: $filtered/$total'
+                  : '${l10n.shownServerLogs} $filtered ${l10n.fromServerLogs} $total ${l10n.recordsServerLogs}',
+              style: theme.textTheme.bodySmall,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLogsList(ThemeData theme, List<ServerLogEntry> logs, AppLocalizations l10n) {
+  Widget _buildLogsList(
+    ThemeData theme,
+    List<ServerLogEntry> logs,
+    bool isLoading,
+    AppLocalizations l10n,
+  ) {
+    if (logs.isEmpty && isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     if (logs.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.inbox_outlined,
-              size: 64,
-              color: Colors.grey.shade400,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _searchQuery.isNotEmpty
-                  ? l10n.noResultsFoundServerLogs
-                  : l10n.noLogsToDisplayServerLogs,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ],
+        child: Text(
+          _searchQuery.isNotEmpty
+              ? l10n.noResultsFoundServerLogs
+              : l10n.noLogsToDisplayServerLogs,
         ),
       );
     }
@@ -289,21 +256,12 @@ class _ServerLogsFragmentState extends ConsumerState<ServerLogsFragment> {
         itemCount: logs.length,
         itemBuilder: (context, index) {
           final log = logs[index];
-
-          // Данные записи лога
-          final logTime = log.formattedTime;
-          final logLevel = log.level;
-          final logSource = log.source;
-          final logMessage = log.message;
-          final logTimestamp = log.timestamp;
-          
           return _buildLogEntry(
-            theme,
-            logTime,
-            logLevel,
-            logSource,
-            logMessage,
-            logTimestamp,
+            log.formattedTime,
+            log.level,
+            log.source,
+            log.message,
+            log.timestamp,
           );
         },
       ),
@@ -311,7 +269,6 @@ class _ServerLogsFragmentState extends ConsumerState<ServerLogsFragment> {
   }
 
   Widget _buildLogEntry(
-    ThemeData theme,
     String formattedTime,
     LogLevel level,
     String? source,
@@ -322,7 +279,6 @@ class _ServerLogsFragmentState extends ConsumerState<ServerLogsFragment> {
 
     return InkWell(
       onLongPress: () => _showLogDetails(
-        context,
         formattedTime,
         level,
         source,
@@ -335,9 +291,7 @@ class _ServerLogsFragmentState extends ConsumerState<ServerLogsFragment> {
         decoration: BoxDecoration(
           color: Colors.black.withOpacity(0.2),
           borderRadius: BorderRadius.circular(4),
-          border: Border(
-            left: BorderSide(color: levelColor, width: 3),
-          ),
+          border: Border(left: BorderSide(color: levelColor, width: 3)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -361,11 +315,7 @@ class _ServerLogsFragmentState extends ConsumerState<ServerLogsFragment> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                Icon(
-                  _getLevelIcon(level),
-                  size: 14,
-                  color: levelColor,
-                ),
+                Icon(_getLevelIcon(level), size: 14, color: levelColor),
                 const SizedBox(width: 4),
                 Text(
                   _getLevelName(level).toUpperCase(),
@@ -408,7 +358,6 @@ class _ServerLogsFragmentState extends ConsumerState<ServerLogsFragment> {
   }
 
   void _showLogDetails(
-    BuildContext context,
     String formattedTime,
     LogLevel level,
     String? source,
@@ -416,7 +365,7 @@ class _ServerLogsFragmentState extends ConsumerState<ServerLogsFragment> {
     DateTime timestamp,
   ) {
     final l10n = AppLocalizations.of(context)!;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -481,27 +430,7 @@ class _ServerLogsFragmentState extends ConsumerState<ServerLogsFragment> {
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
-          Expanded(
-            child: Text(value),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showExportDialog(BuildContext context, List<ServerLogEntry> logs) {
-    final l10n = AppLocalizations.of(context)!;
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.exportLogsTitleServerLogs),
-        content: Text(l10n.exportComingSoonServerLogs),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.understoodServerLogs),
-          ),
+          Expanded(child: Text(value)),
         ],
       ),
     );
@@ -550,5 +479,31 @@ class _ServerLogsFragmentState extends ConsumerState<ServerLogsFragment> {
       case LogLevel.fatal:
         return Colors.red.shade900;
     }
+  }
+}
+
+class _ErrorBanner extends StatelessWidget {
+  const _ErrorBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Theme.of(context).colorScheme.errorContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Icon(
+              Icons.warning_amber_rounded,
+              color: Theme.of(context).colorScheme.error,
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -1,66 +1,218 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
+import '../model/auth_session.dart';
 import '../model/user_model.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../services/api_exception.dart';
+import 'app_dependencies.dart';
 
-class AuthNotifier extends StateNotifier<bool> {
-  static const String _isLoggedInKey = 'is_logged_in';
-  static const String _emailKey = 'user_email';
-  static const String _rememberMeKey = 'remember_me';
-  static const FlutterSecureStorage _storage = FlutterSecureStorage();
+class AuthState {
+  const AuthState({
+    required this.isInitializing,
+    required this.isSubmitting,
+    this.session,
+    this.user,
+    this.rememberedIdentity,
+    this.errorMessage,
+  });
 
-  AuthNotifier() : super(false) {
-    _checkLoginStatus();
+  factory AuthState.initial() {
+    return const AuthState(
+      isInitializing: true,
+      isSubmitting: false,
+    );
   }
 
-  Future<void> _checkLoginStatus() async {
-    final prefs = await SharedPreferences.getInstance();
-    final isLoggedIn = prefs.getBool(_isLoggedInKey) ?? false;
-    if (isLoggedIn) state = true;
-  }
+  final bool isInitializing;
+  final bool isSubmitting;
+  final AuthSession? session;
+  final UserModel? user;
+  final String? rememberedIdentity;
+  final String? errorMessage;
 
-  Future<void> login({
-    required String email,
-    required String password,
-    required bool rememberMe,
-  }) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_isLoggedInKey, true);
-    
-    if (rememberMe) {
-      await prefs.setString(_emailKey, email);
-      await prefs.setBool(_rememberMeKey, true);
-      
-      await _storage.write(key: 'user_password_secure', value: password);
-    }
-    
-    state = true;
-  }
+  bool get isAuthenticated => session != null && user != null;
 
-  Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_isLoggedInKey);
-    await prefs.remove(_emailKey);
-    await prefs.remove(_rememberMeKey);
-    
-    await _storage.delete(key: 'user_password_secure');
-    
-    state = false;
-  }
-
-  Future<Map<String, String>?> getSavedCredentials() async {
-    final prefs = await SharedPreferences.getInstance();
-    final rememberMe = prefs.getBool(_rememberMeKey) ?? false;
-    if (!rememberMe) return null;
-    
-    final email = prefs.getString(_emailKey) ?? '';
-    final password = await _storage.read(key: 'user_password_secure') ?? '';
-    
-    return {'email': email, 'password': password};
+  AuthState copyWith({
+    bool? isInitializing,
+    bool? isSubmitting,
+    AuthSession? session,
+    bool clearSession = false,
+    UserModel? user,
+    bool clearUser = false,
+    String? rememberedIdentity,
+    String? errorMessage,
+    bool clearErrorMessage = false,
+  }) {
+    return AuthState(
+      isInitializing: isInitializing ?? this.isInitializing,
+      isSubmitting: isSubmitting ?? this.isSubmitting,
+      session: clearSession ? null : (session ?? this.session),
+      user: clearUser ? null : (user ?? this.user),
+      rememberedIdentity: rememberedIdentity ?? this.rememberedIdentity,
+      errorMessage: clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
+    );
   }
 }
 
-final authProvider = StateNotifierProvider<AuthNotifier, bool>((ref) {
-  return AuthNotifier();
+class AuthNotifier extends StateNotifier<AuthState> {
+  AuthNotifier(this._ref) : super(AuthState.initial()) {
+    _restoreSession();
+  }
+
+  final Ref _ref;
+
+  Future<void> _restoreSession() async {
+    final repository = _ref.read(authRepositoryProvider);
+    final rememberedIdentity = await repository.readRememberedIdentity();
+    final storedSession = await repository.readStoredSession();
+
+    if (storedSession == null) {
+      state = AuthState(
+        isInitializing: false,
+        isSubmitting: false,
+        rememberedIdentity: rememberedIdentity,
+      );
+      return;
+    }
+
+    try {
+      final user = await repository.getCurrentUser();
+      final refreshedSession =
+          await repository.readStoredSession() ?? storedSession;
+      state = AuthState(
+        isInitializing: false,
+        isSubmitting: false,
+        session: refreshedSession,
+        user: user,
+        rememberedIdentity: rememberedIdentity,
+      );
+    } catch (error) {
+      await repository.clearSession();
+      state = AuthState(
+        isInitializing: false,
+        isSubmitting: false,
+        rememberedIdentity: rememberedIdentity,
+        errorMessage: _errorMessage(error),
+      );
+    }
+  }
+
+  Future<String?> getRememberedIdentity() async {
+    final identity =
+        await _ref.read(authRepositoryProvider).readRememberedIdentity();
+    state = state.copyWith(rememberedIdentity: identity);
+    return identity;
+  }
+
+  Future<void> login({
+    required String identity,
+    required String password,
+    required bool rememberIdentity,
+  }) async {
+    state = state.copyWith(
+      isSubmitting: true,
+      clearErrorMessage: true,
+    );
+
+    try {
+      final repository = _ref.read(authRepositoryProvider);
+      final session = await repository.login(
+        identity: identity.trim(),
+        password: password,
+        rememberIdentity: rememberIdentity,
+      );
+      final user = await repository.getCurrentUser();
+
+      state = AuthState(
+        isInitializing: false,
+        isSubmitting: false,
+        session: session,
+        user: user,
+        rememberedIdentity: await repository.readRememberedIdentity(),
+      );
+    } catch (error) {
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: _errorMessage(error),
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> register({
+    required String username,
+    required String password,
+    String? email,
+  }) async {
+    state = state.copyWith(
+      isSubmitting: true,
+      clearErrorMessage: true,
+    );
+
+    try {
+      final repository = _ref.read(authRepositoryProvider);
+      final session = await repository.register(
+        username: username.trim(),
+        password: password,
+        email: email?.trim(),
+      );
+      final user = await repository.getCurrentUser();
+
+      state = AuthState(
+        isInitializing: false,
+        isSubmitting: false,
+        session: session,
+        user: user,
+        rememberedIdentity: await repository.readRememberedIdentity(),
+      );
+    } catch (error) {
+      state = state.copyWith(
+        isSubmitting: false,
+        errorMessage: _errorMessage(error),
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> refreshProfile() async {
+    if (!state.isAuthenticated) {
+      return;
+    }
+
+    try {
+      final repository = _ref.read(authRepositoryProvider);
+      final user = await repository.getCurrentUser();
+      final session = await repository.readStoredSession();
+      state = state.copyWith(
+        session: session,
+        user: user,
+        clearErrorMessage: true,
+      );
+    } catch (error) {
+      state = state.copyWith(errorMessage: _errorMessage(error));
+    }
+  }
+
+  Future<void> logout() async {
+    state = state.copyWith(isSubmitting: true, clearErrorMessage: true);
+
+    final repository = _ref.read(authRepositoryProvider);
+    await repository.logout();
+
+    state = AuthState(
+      isInitializing: false,
+      isSubmitting: false,
+      rememberedIdentity: await repository.readRememberedIdentity(),
+    );
+  }
+
+  String _errorMessage(Object error) {
+    if (error is ApiException) {
+      return error.message;
+    }
+    return error.toString();
+  }
+}
+
+final authProvider = StateNotifierProvider<AuthNotifier, AuthState>((ref) {
+  return AuthNotifier(ref);
 });

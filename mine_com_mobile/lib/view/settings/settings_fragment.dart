@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../provider/settings_provider.dart';
 import '../../provider/auth_provider.dart';
-import '../../provider/notification_provider.dart';
 import '../../provider/language_provider.dart';
-import '../auth/login_screen.dart';
 import 'language_picker_fragment.dart';
 import 'package:mine_com_mobile/l10n/app_localizations.dart';
 
@@ -161,16 +159,6 @@ class SettingsFragment extends ConsumerWidget {
               SnackBar(content: Text(l10n.helpSupport)),
             ),
           ),
-          Divider(height: 1, color: theme.dividerColor),
-          _buildListTile(
-            theme,
-            icon: Icons.privacy_tip_outlined,
-            title: l10n.privacyPolicy,
-            subtitle: l10n.privacyPolicySubtitle,
-            onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(l10n.privacyPolicy)),
-            ),
-          ),
         ],
       ),
     );
@@ -282,12 +270,6 @@ class SettingsFragment extends ConsumerWidget {
             onPressed: () async {
               Navigator.pop(context);
               await ref.read(authProvider.notifier).logout();
-              if (context.mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  (route) => false,
-                );
-              }
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
